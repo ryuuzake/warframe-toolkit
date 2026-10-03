@@ -11,8 +11,9 @@ React + TypeScript + Tailwind + shadcn/ui.
 - Inspect the reward table for each refinement state (Intact, Exceptional,
   Flawless, Radiant) with per-reward rarity, drop chance and ducat value.
 - Expected ducats per run for the selected refinement.
-- Log drops into a farm tally with a running ducat total. The tally, selected
-  relic and filters are persisted to `localStorage`.
+- Log drops into a farm tally with a running ducat total. Search any prime
+  reward by name to add it directly, or add it from a relic's reward table.
+  The tally, selected relic and filters are persisted to `localStorage`.
 
 ## Data pipeline
 
@@ -47,15 +48,15 @@ RELIC_DATA_REFRESH=1 ...   # force a refetch, ignoring the cache
 
 ## Scripts
 
-| Command              | Description                                          |
-| -------------------- | ---------------------------------------------------- |
-| `bun run dev`        | Start the Vite dev server                            |
-| `bun run data:relics`| Fetch + regenerate `src/data/relics.ts`              |
-| `bun run build`      | Regenerate data, type-check and build for production |
-| `bun run preview`    | Preview the production build                         |
-| `bun run lint`       | ESLint                                               |
-| `bun run typecheck`  | TypeScript                                           |
-| `bun run format`     | Prettier                                             |
+| Command               | Description                                          |
+| --------------------- | ---------------------------------------------------- |
+| `bun run dev`         | Start the Vite dev server                            |
+| `bun run data:relics` | Fetch + regenerate `src/data/relics.ts`              |
+| `bun run build`       | Regenerate data, type-check and build for production |
+| `bun run preview`     | Preview the production build                         |
+| `bun run lint`        | ESLint                                               |
+| `bun run typecheck`   | TypeScript                                           |
+| `bun run format`      | Prettier                                             |
 
 ## Licensing
 

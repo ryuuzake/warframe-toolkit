@@ -1,5 +1,6 @@
 import { Coins, Minus, Plus, ShoppingBag, Trash } from "lucide-react"
 
+import { ItemPicker } from "@/components/item-picker"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { ITEMS, tallyLines, tallyTotals, type Tally } from "@/lib/relics"
@@ -46,6 +47,13 @@ export function TallyPanel({
         </Button>
       </header>
 
+      <div className="flex flex-col gap-1.5">
+        <ItemPicker onAdd={onAdd} />
+        <p className="text-xs text-muted-foreground">
+          Know the part but not the relic? Search it here.
+        </p>
+      </div>
+
       <div className="grid grid-cols-2 gap-2">
         <div className="rounded-lg border border-border bg-background/60 px-3 py-2">
           <div className="flex items-center gap-1 text-lg font-semibold tabular-nums">
@@ -72,8 +80,8 @@ export function TallyPanel({
             <ShoppingBag className="size-6 text-muted-foreground/50" />
             <p className="max-w-[16rem] text-sm text-muted-foreground">
               Add relic rewards with the{" "}
-              <Plus className="inline size-3 align-text-bottom" /> button to
-              build a ducat tally for your farming session.
+              <Plus className="inline size-3 align-text-bottom" /> button, or
+              search any item by name above.
             </p>
           </div>
         ) : (

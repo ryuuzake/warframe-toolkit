@@ -3,6 +3,7 @@ import { Lock, RotateCcw, Search } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   ERA_ORDER,
   eraBadgeClass,
@@ -98,7 +99,7 @@ export function RelicBrowser({
         )}
       </div>
 
-      <div className="-mx-1 min-h-0 flex-1 overflow-y-auto px-1">
+      <ScrollArea className="-mx-1 min-h-0 flex-1 px-1">
         {relics.length === 0 ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
             No relics match these filters.
@@ -148,7 +149,7 @@ export function RelicBrowser({
             })}
           </ul>
         )}
-      </div>
+      </ScrollArea>
     </aside>
   )
 }

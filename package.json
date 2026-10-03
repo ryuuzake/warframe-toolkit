@@ -16,6 +16,7 @@
     "@base-ui/react": "^1.8.0",
     "@fontsource-variable/geist": "^5.3.0",
     "@tailwindcss/vite": "^4",
+    "@tanstack/react-virtual": "^3.14.13",
     "class-variance-authority": "^0.7.1",
     "cn": "^0.3.0",
     "lucide-react": "^1.47.0",
@@ -37,6 +38,7 @@
     "globals": "^17",
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
+    "react-grab": "^0.2.0",
     "typescript": "~6",
     "typescript-eslint": "^8",
     "vite": "^8"

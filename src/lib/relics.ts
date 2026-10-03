@@ -34,6 +34,48 @@ export function getItem(name: string): RelicItem | undefined {
   return ITEMS[name]
 }
 
+/**
+ * Every reward item name, alphabetically sorted, for name-first search.
+ * Derived once at module load since {@link ITEMS} is static generated data.
+ */
+export const ITEM_NAMES: readonly string[] = Object.keys(ITEMS).sort((a, b) =>
+  a.localeCompare(b)
+)
+
+/**
+ * Rank item names for a free-text query, so a reward can be added to the tally
+ * without first finding the relic it dropped from.
+ *
+ * Every whitespace-separated token must appear somewhere in the name, which
+ * lets "acceltra barrel" match "Acceltra Prime Barrel". Earlier and
+ * word-boundary matches rank first, so the most likely item is on top.
+ * An empty query returns every name in alphabetical order.
+ */
+export function searchItems(query: string): string[] {
+  const tokens = query.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  if (tokens.length === 0) return [...ITEM_NAMES]
+
+  const scored: { name: string; score: number }[] = []
+  for (const name of ITEM_NAMES) {
+    const haystack = name.toLowerCase()
+    let score = 0
+    let matches = true
+    for (const token of tokens) {
+      const index = haystack.indexOf(token)
+      if (index === -1) {
+        matches = false
+        break
+      }
+      score += index
+      if (index === 0 || haystack[index - 1] === " ") score -= 5
+    }
+    if (matches) scored.push({ name, score })
+  }
+
+  scored.sort((a, b) => a.score - b.score || a.name.localeCompare(b.name))
+  return scored.map((entry) => entry.name)
+}
+
 /** Ducat value of an item, treating unsellable items as zero. */
 export function ducatsFor(name: string): number {
   return ITEMS[name]?.ducats ?? 0
