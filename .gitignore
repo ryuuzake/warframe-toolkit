@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Local scratch notes and ticket drafts
+.scratch/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
