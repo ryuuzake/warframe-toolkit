@@ -3,13 +3,134 @@ import { Coins, Minus, Plus, ShoppingBag, Trash } from "lucide-react"
 import { ItemPicker } from "@/components/item-picker"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { ITEMS, tallyLines, tallyTotals, type Tally } from "@/lib/relics"
+import {
+  ducatsPerPlat,
+  marketFor,
+  verdictFor,
+  type MarketVerdict,
+} from "@/lib/market"
+import {
+  ITEMS,
+  tallyLines,
+  tallyTotals,
+  type Tally,
+  type TallyLine,
+} from "@/lib/relics"
 
 interface TallyPanelProps {
   tally: Tally
   onAdd: (item: string) => void
   onRemove: (item: string) => void
   onClear: () => void
+  /** Header-computed staleness — dims market figures in lockstep with it. */
+  marketStale: boolean
+}
+
+/** Badge classes for a verdict, matching the rarity-badge conventions. */
+const VERDICT_BADGE: Record<MarketVerdict, string> = {
+  sell: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 ring-emerald-500/20",
+  burn: "bg-rose-500/15 text-rose-700 dark:text-rose-300 ring-rose-500/20",
+}
+
+/**
+ * Secondary meta line for a tally line, resolving it to exactly one row of
+ * the sell/burn state matrix (see .scratch/ticket-02-sell-burn-verdict.md):
+ *
+ * - ducats + market row, `volume >= 5`  → `12p · 3.8 d/p` + sell/burn badge
+ *   (the badge itself is suppressed while `MARKET_FODDER_RATE` is `null`)
+ * - market row, `1 <= volume < 5`       → same numbers + `thin market · n sales`
+ * - market row, `volume = 0`            → greyed `12p` + `no recent sales`
+ * - ducats, no market row               → ducats only
+ * - `ducats: null`                      → `not sellable` (price link kept)
+ */
+function LineMarketMeta({
+  line,
+  stale,
+}: {
+  line: TallyLine
+  stale: boolean
+}) {
+  const market = marketFor(line.item)
+  const ducats = ITEMS[line.item]?.ducats ?? null
+
+  // Amber only on the warning itself; staleness stays otherwise neutral.
+  const dim = stale ? "opacity-60" : ""
+
+  if (!market) {
+    return (
+      <span className="tabular-nums">
+        {ducats != null ? `${line.ducats} ducats each` : "not sellable"}
+      </span>
+    )
+  }
+
+  const { volume } = market
+  const ratio = ducatsPerPlat(line.item)
+  const verdict = verdictFor(line.item)
+  const thin = volume >= 1 && volume < 5
+
+  return (
+    <>
+      <a
+        href={`https://warframe.market/items/${market.slug}`}
+        target="_blank"
+        rel="noreferrer"
+        className={
+          "tabular-nums underline-offset-2 hover:underline " +
+          (volume === 0 ? "opacity-50 " : "") +
+          dim
+        }
+        title={`median ${market.median}p over ${volume} trades${stale ? " (stale snapshot)" : ""}`}
+      >
+        {market.waPrice.toLocaleString(undefined, {
+          maximumFractionDigits: 2,
+        })}
+        p
+      </a>
+      {ducats == null ? (
+        <>
+          <span aria-hidden="true">·</span>
+          <span className={dim}>not sellable</span>
+        </>
+      ) : volume === 0 ? (
+        <>
+          <span aria-hidden="true">·</span>
+          <span className={dim}>no recent sales</span>
+        </>
+      ) : ratio === null ? null : (
+        <>
+          <span aria-hidden="true">·</span>
+          <span
+            className={`tabular-nums ${dim}`}
+            title={`${ducats} ducats / ${market.waPrice}p`}
+          >
+            {ratio.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+            d/p
+          </span>
+        </>
+      )}
+      {verdict !== null ? (
+        <>
+          <span aria-hidden="true">·</span>
+          <Badge
+            className={`rounded px-1 py-0 text-[0.65rem] ring-1 ${VERDICT_BADGE[verdict]} ${dim}`}
+            title={
+              verdict === "burn"
+                ? "ducats per platinum above the 90th-percentile rate — burn at the kiosk"
+                : "ducats per platinum at or below the 90th-percentile rate — sell for platinum"
+            }
+          >
+            {verdict}
+          </Badge>
+        </>
+      ) : thin ? (
+        <>
+          <span aria-hidden="true">·</span>
+          <span>thin market · {volume} sales</span>
+        </>
+      ) : null}
+    </>
+  )
 }
 
 export function TallyPanel({
@@ -17,6 +138,7 @@ export function TallyPanel({
   onAdd,
   onRemove,
   onClear,
+  marketStale,
 }: TallyPanelProps) {
   const lines = tallyLines(tally)
   const totals = tallyTotals(tally)
@@ -95,12 +217,8 @@ export function TallyPanel({
                   <div className="truncate text-sm font-medium">
                     {line.item}
                   </div>
-                  <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                    <span className="tabular-nums">
-                      {ITEMS[line.item]?.ducats != null
-                        ? `${line.ducats} ducats each`
-                        : "not sellable"}
-                    </span>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs text-muted-foreground">
+                    <LineMarketMeta line={line} stale={marketStale} />
                   </div>
                 </div>
 
@@ -128,7 +246,7 @@ export function TallyPanel({
                   </Button>
                 </div>
 
-                <Badge className="w-14 justify-end border-transparent bg-transparent text-amber-600 tabular-nums dark:text-amber-400">
+                <Badge className="min-w-9 justify-end border-transparent bg-transparent px-1 text-amber-600 tabular-nums dark:text-amber-400">
                   {line.subtotal.toLocaleString()}
                 </Badge>
               </li>

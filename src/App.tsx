@@ -1,11 +1,13 @@
 import * as React from "react"
-import { Coins, Database } from "lucide-react"
+import { Coins, Database, TriangleAlert } from "lucide-react"
 
 import { RelicBrowser } from "@/components/relic-browser"
 import { RelicDetail } from "@/components/relic-detail"
 import { TallyPanel } from "@/components/tally-panel"
+import { MARKET_GENERATED_AT } from "@/data/market"
 import { DATA_GENERATED_AT } from "@/data/relics"
 import { useLocalStorage } from "@/hooks/use-local-storage"
+import { isMarketStale, marketAgeDays } from "@/lib/market"
 import {
   RELICS,
   addToTally,
@@ -15,6 +17,30 @@ import {
   type RelicRefinement,
   type Tally,
 } from "@/lib/relics"
+
+const dateFmt = new Intl.DateTimeFormat(undefined, {
+  year: "numeric",
+  month: "short",
+  day: "numeric",
+})
+
+/**
+ * Amber stale warning for the market stamp. Hidden…sm:flex keeps the *full*
+ * stamp desktop-only, but staleness is the one thing worth shouting about, so
+ * this shows (unchanged) at every breakpoint.
+ */
+function StaleMarketNotice({ ageDays }: { ageDays: number }) {
+  return (
+    <p
+      className="flex items-center gap-1 text-xs font-medium text-amber-600 dark:text-amber-400"
+      role="status"
+      title="warframe.market snapshot is older than 72h — run `bun run data:market` to refresh it"
+    >
+      <TriangleAlert className="size-3" aria-hidden="true" />
+      market data {ageDays} {ageDays === 1 ? "day" : "days"} old
+    </p>
+  )
+}
 
 export function App() {
   const [query, setQuery] = React.useState("")
@@ -32,6 +58,11 @@ export function App() {
     "Intact"
   )
   const [tally, setTally] = useLocalStorage<Tally>("wf.relics.tally", {})
+
+  // Single staleness computation, handed down to TallyPanel so header and
+  // panel can never disagree.
+  const marketStale = isMarketStale()
+  const marketAge = marketAgeDays()
 
   const filteredRelics = React.useMemo(() => {
     const needle = query.trim().toLowerCase()
@@ -91,17 +122,27 @@ export function App() {
         <div className="mx-auto flex w-full max-w-[100rem] items-center justify-between gap-4 px-4 py-3">
           <div className="min-w-0">
             <h1 className="truncate text-base font-semibold tracking-tight">
-              Warframe Relic Ducat Tally
+              Warframe Toolkit
             </h1>
             <p className="hidden items-center gap-1 text-xs text-muted-foreground sm:flex">
               <Database className="size-3" />
               {RELICS.length} relics ·{" "}
-              {new Date(DATA_GENERATED_AT).toLocaleDateString(undefined, {
-                year: "numeric",
-                month: "short",
-                day: "numeric",
-              })}
+              {dateFmt.format(new Date(DATA_GENERATED_AT))}
+              <span
+                className={
+                  marketStale
+                    ? "font-medium text-amber-600 dark:text-amber-400"
+                    : undefined
+                }
+              >
+                {" · market "}
+                {dateFmt.format(new Date(MARKET_GENERATED_AT))}
+                {marketStale
+                  ? ` (${marketAge} ${marketAge === 1 ? "day" : "days"} old — rebuild to refresh)`
+                  : null}
+              </span>
             </p>
+            {marketStale ? <StaleMarketNotice ageDays={marketAge} /> : null}
           </div>
 
           <div className="flex items-center gap-3">
@@ -150,9 +191,15 @@ export function App() {
             onAdd={addItem}
             onRemove={removeItem}
             onClear={clearTally}
+            marketStale={marketStale}
           />
         </div>
       </div>
+
+      <footer className="mx-auto w-full max-w-[100rem] px-4 pb-4 text-xs text-muted-foreground/60">
+        Price data from warframe.market · game content © Digital Extremes Ltd.
+        (non-commercial fan use)
+      </footer>
     </div>
   )
 }

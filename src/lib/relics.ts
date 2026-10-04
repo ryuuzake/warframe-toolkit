@@ -10,6 +10,8 @@ import {
   type RelicReward,
   type RewardRarity,
 } from "@/data/relics"
+import { type MarketSnapshot } from "@/data/market"
+import { marketFor } from "@/lib/market"
 
 export { ITEMS, RELICS, RELIC_ERAS, RELIC_REFINEMENTS }
 export type {
@@ -106,13 +108,16 @@ export interface TallyLine {
   quantity: number
   ducats: number
   subtotal: number
+  /** Market snapshot, when this reward is tracked on warframe.market. */
+  market: MarketSnapshot | null
 }
 
 export function tallyLines(tally: Tally): TallyLine[] {
   return Object.entries(tally)
     .map(([item, quantity]) => {
       const ducats = ITEMS[item]?.ducats ?? 0
-      return { item, quantity, ducats, subtotal: ducats * quantity }
+      const market = marketFor(item)
+      return { item, quantity, ducats, market, subtotal: ducats * quantity }
     })
     .sort((a, b) => b.subtotal - a.subtotal || a.item.localeCompare(b.item))
 }
