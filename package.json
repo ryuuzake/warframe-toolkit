@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "data:relics": "bun scripts/build-relics-data.ts",
-    "build": "bun run data:relics && tsc -b && vite build",
+    "data:market": "bun scripts/build-market-data.ts",
+    "build": "bun run data:relics && bun run data:market && tsc -b && vite build",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "typecheck": "tsc --noEmit",
