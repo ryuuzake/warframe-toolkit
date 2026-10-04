@@ -13,6 +13,14 @@
  *       relic `vaulted` flags, reward identity (uniqueName, warframe.market),
  *       and per-component `ducats` values.
  *
+ *   - warframe.market          `/v2/items` (fallback ducat source)
+ *       warframe-items stopped scraping ducats upstream (2026-10), so ducat
+ *       values now come from the v2 items' documented `ducats` field, joined
+ *       by the `warframeMarket.id` already carried on relic rewards. Per the
+ *       research (docs/research/warframe-market-api.md §2/§4.1) the v2 field
+ *       matches the wiki ducat table exactly; set roots (which report the sum
+ *       of their parts) are never relic rewards, so they can't leak in.
+ *
  * Raw downloads are cached under `node_modules/.cache/warframe-relics/` for 24h
  * so repeated builds are fast and work offline. Override with:
  *   RELIC_DATA_REFRESH=1   force a refetch
@@ -27,6 +35,8 @@ import { mkdir, readFile, stat, writeFile } from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
+import { USER_AGENT } from "./lib/user-agent"
+
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
 const CACHE_DIR = path.join(ROOT, "node_modules", ".cache", "warframe-relics")
 const OUT_FILE = path.join(ROOT, "src", "data", "relics.ts")
@@ -38,6 +48,7 @@ const DROP_DATA_URL =
   "https://raw.githubusercontent.com/WFCD/warframe-drop-data/master/data/relics.json"
 const WFI_BASE =
   "https://raw.githubusercontent.com/WFCD/warframe-items/master/data/json"
+const WFM_ITEMS_URL = "https://api.warframe.market/v2/items"
 const WFI_RELICS_FILE = "Relics"
 /** Equipment categories that can carry prime parts / ducat values. */
 const WFI_ITEM_FILES = [
@@ -111,6 +122,16 @@ interface RawItem {
   components?: RawItemComponent[]
 }
 
+interface RawWfmItem {
+  id: string
+  /** Ducat value; absent on items that can't be sold at the kiosk. */
+  ducats?: number
+}
+
+interface RawWfmItems {
+  data: RawWfmItem[]
+}
+
 // ---------------------------------------------------------------------------
 // Fetch + cache
 // ---------------------------------------------------------------------------
@@ -131,7 +152,7 @@ async function fetchCached<T>(url: string, cacheName: string): Promise<T> {
 
   try {
     const res = await fetch(url, {
-      headers: { "user-agent": "warframe-toolkit build script" },
+      headers: { "user-agent": USER_AGENT },
     })
     if (!res.ok) throw new Error(`HTTP ${res.status} ${res.statusText}`)
     const text = await res.text()
@@ -231,19 +252,30 @@ function parseWfiRelicName(fullName: string): {
 async function loadDucatsAndMarket(): Promise<{
   ducatsByUniqueName: Map<string, number>
   ducatsByDisplayName: Map<string, number>
+  ducatsByMarketId: Map<string, number>
   marketByDisplayName: Map<string, { id: string; urlName: string }>
   uniqueByDisplayName: Map<string, string>
 }> {
   const ducatsByUniqueName = new Map<string, number>()
   const ducatsByDisplayName = new Map<string, number>()
+  const ducatsByMarketId = new Map<string, number>()
   const marketByDisplayName = new Map<string, { id: string; urlName: string }>()
   const uniqueByDisplayName = new Map<string, string>()
 
-  const files = await Promise.all(
-    WFI_ITEM_FILES.map((file) =>
-      fetchCached<RawItem[]>(`${WFI_BASE}/${file}.json`, `wfi-${file}.json`)
-    )
-  )
+  const [files, wfmItems] = await Promise.all([
+    Promise.all(
+      WFI_ITEM_FILES.map((file) =>
+        fetchCached<RawItem[]>(`${WFI_BASE}/${file}.json`, `wfi-${file}.json`)
+      )
+    ),
+    fetchCached<RawWfmItems>(WFM_ITEMS_URL, "wfm-items-v2.json"),
+  ])
+
+  for (const item of wfmItems.data) {
+    if (typeof item.ducats === "number") {
+      ducatsByMarketId.set(item.id, item.ducats)
+    }
+  }
 
   for (const items of files) {
     for (const item of items) {
@@ -285,6 +317,7 @@ async function loadDucatsAndMarket(): Promise<{
   return {
     ducatsByUniqueName,
     ducatsByDisplayName,
+    ducatsByMarketId,
     marketByDisplayName,
     uniqueByDisplayName,
   }
@@ -312,6 +345,20 @@ async function main() {
             reward.item.name,
             reward.item.warframeMarket
           )
+          // warframe-items no longer scrapes ducats; fall back to the v2 feed
+          // joined by the market id. Equipment-file values (if upstream ever
+          // restores them) and uniqueName-resolved values win, so only fill
+          // genuine gaps here.
+          const feedDucats = itemMaps.ducatsByMarketId.get(
+            reward.item.warframeMarket.id
+          )
+          if (
+            typeof feedDucats === "number" &&
+            !itemMaps.ducatsByDisplayName.has(reward.item.name) &&
+            !itemMaps.ducatsByUniqueName.has(reward.item.uniqueName)
+          ) {
+            itemMaps.ducatsByDisplayName.set(reward.item.name, feedDucats)
+          }
         }
         if (!itemMaps.uniqueByDisplayName.has(reward.item.name)) {
           itemMaps.uniqueByDisplayName.set(
@@ -493,8 +540,9 @@ async function main() {
 // Regenerate with: bun run data:relics
 // Generated: ${generatedAt}
 //
-// Sources (MIT): WFCD/warframe-drop-data, WFCD/warframe-items.
-// Game content © Digital Extremes Ltd. Non-commercial fan use only.
+// Sources: WFCD/warframe-drop-data + WFCD/warframe-items (MIT); ducat values
+// fall back to warframe.market /v2/items. Game content © Digital Extremes Ltd.
+// Non-commercial fan use only.
 
 export type RelicEra = ${quotedUnion(eras)}
 export type RelicRefinement = ${quotedUnion([...REFINEMENTS])}
@@ -506,7 +554,8 @@ export interface RelicMarketInfo {
 }
 
 export interface RelicItem {
-  /** Ducat value from warframe-items, or \`null\` when the item cannot be sold. */
+  /** Ducat value (warframe-items, falling back to warframe.market v2 items),
+   * or \`null\` when the item cannot be sold at the ducat kiosk. */
   ducats: number | null
   market: RelicMarketInfo | null
 }
