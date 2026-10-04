@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Wrangler local state (Cloudflare Pages)
+.wrangler
+
 # Local scratch notes and ticket drafts
 .scratch/
 

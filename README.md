@@ -64,9 +64,36 @@ honest) and the build continues with a warning.
 | `bun run data:market` | Fetch + regenerate `src/data/market.ts`              |
 | `bun run build`       | Regenerate data, type-check and build for production |
 | `bun run preview`     | Preview the production build                         |
+| `bun run deploy`      | Build and deploy `dist/` to Cloudflare Pages         |
 | `bun run lint`        | ESLint                                               |
 | `bun run typecheck`   | TypeScript                                           |
 | `bun run format`      | Prettier                                             |
+
+## Deployment
+
+Hosted on **Cloudflare Pages** as a direct-upload project (no Git integration):
+
+| | |
+| --- | --- |
+| Project | `warframe-toolkit` |
+| Default URL | https://warframe-toolkit-w2b.pages.dev |
+| Custom domain | https://warframe.usual-place.my.id |
+| Output directory | `dist` (purely static — no Pages Functions) |
+| Config | `wrangler.jsonc` |
+
+```bash
+bun run deploy   # regenerates data, builds, then `wrangler pages deploy`
+```
+
+Wrangler reads `name` and `pages_build_output_dir` from `wrangler.jsonc`, so no
+arguments are needed. Deploying from a branch other than `main` creates a
+preview deployment instead of a production one.
+
+The custom domain lives in account state, not in this repo. To re-attach it on a
+recreated project: add the domain in the Pages project **first**, then create a
+proxied `CNAME` for `warframe.usual-place.my.id` pointing at
+`warframe-toolkit-w2b.pages.dev`. Adding the DNS record before the domain is
+associated with the project fails to validate.
 
 ## Licensing
 

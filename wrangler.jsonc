@@ -1,0 +1,8 @@
+{
+  // Cloudflare Pages project configuration.
+  // Deploy with: bun run deploy  (or `wrangler pages deploy`)
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "warframe-toolkit",
+  "pages_build_output_dir": "dist",
+  "compatibility_date": "2026-10-05"
+}
