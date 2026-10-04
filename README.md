@@ -1,10 +1,13 @@
-# Warframe Relic Ducat Tally
+# Warframe Toolkit
 
-A small web tool for browsing Void relics, comparing refinement drop chances,
-and tallying the ducat value of the prime parts you farm. Built with Vite +
-React + TypeScript + Tailwind + shadcn/ui.
+A small web toolkit for Warframe, built with Vite + React + TypeScript +
+Tailwind + shadcn/ui. Its first tool — the **Relic Ducat Tally** — browses Void
+relics, compares refinement drop chances, and tallies the ducat and platinum
+value of the prime parts you farm.
 
-## Features
+## Relic Ducat Tally
+
+### Features
 
 - Browse all relics by era (Lith / Meso / Neo / Axi / Requiem / Vanguard),
   search by name and filter out vaulted relics.
@@ -41,8 +44,14 @@ The script:
 
 ```bash
 bun run data:relics        # regenerate src/data/relics.ts
+bun run data:market        # regenerate src/data/market.ts
 RELIC_DATA_REFRESH=1 ...   # force a refetch, ignoring the cache
+MARKET_DATA_REFRESH=1 ...  # same, for the market snapshot
 ```
+
+The market fetch is fresh-only: if warframe.market is unreachable past the
+TTL, the committed `market.ts` is left untouched (its build stamp stays
+honest) and the build continues with a warning.
 
 `bun run build` regenerates the data before type-checking and bundling.
 
@@ -52,6 +61,7 @@ RELIC_DATA_REFRESH=1 ...   # force a refetch, ignoring the cache
 | --------------------- | ---------------------------------------------------- |
 | `bun run dev`         | Start the Vite dev server                            |
 | `bun run data:relics` | Fetch + regenerate `src/data/relics.ts`              |
+| `bun run data:market` | Fetch + regenerate `src/data/market.ts`              |
 | `bun run build`       | Regenerate data, type-check and build for production |
 | `bun run preview`     | Preview the production build                         |
 | `bun run lint`        | ESLint                                               |
@@ -62,4 +72,6 @@ RELIC_DATA_REFRESH=1 ...   # force a refetch, ignoring the cache
 
 Game content and names are © Digital Extremes Ltd. and are used here for
 non-commercial fan purposes. The upstream datasets are MIT-licensed; ducat
-values originate from the community wiki (CC BY-NC-SA 3.0).
+values originate from the community wiki (CC BY-NC-SA 3.0). Price data belongs
+to [warframe.market](https://warframe.market) and is used on its
+non-commercial fan-use basis.
